@@ -1,12 +1,12 @@
 Name: PSNotes
 
-Version: 0.1
+Version: 0.2
 
 Author: Kevin Doblosky (kdoblosky@gmail.com)
 
 Source: https://github.com/kdoblosky/PSNotes
 
-Last Updated: 2014-02-18
+Last Updated: 2014-02-19
 
 Note-taking utility for PowerShell. 
 
@@ -22,6 +22,7 @@ Functions include:
 - Add-Notebook (alias anb) - this adds a new notebook and alias
 - Get-Notes (alias gn) - retrieves the notes from a single notebook
 - Add-NewNote (alias note) - Adds a date-stamped note to the specified notebook, optionally creating a new one
+- Open-Notebook (alias onb) - Opens a notebook in a text editor. If the alias npp is defined, will use the editor that is an alias to, otherwise will use notepad.
 
 Variables:
 - $DefaultNotePath - specified where to create new notebooks, if a path is not provided.
@@ -69,4 +70,7 @@ $ > Get-Notes -Notebook ABC
 # Or, more compactly:
 $ > gn ABC
 2014-02-18 - Plan to take over the world is now 90% complete
+
+# Open notebook in editor
+$ > onb ABC
 ```

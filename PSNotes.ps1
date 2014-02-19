@@ -1,7 +1,7 @@
-﻿
+﻿Set-Alias -Name npp -Value "C:\Program Files (x86)\Notepad++\notepad++.exe"
 
 # Where to store notebooks if no path is provided
-$DefaultNotePath = "D:\Notes"
+$DefaultNotePath = "E:\Scripts\PSNotes"
 
 # Where to store list of notebooks
 $NoteBookList = Join-Path $DefaultNotePath NotesList.json
@@ -150,6 +150,35 @@ Written by Kevin Doblosky (kdoblosky@gmail.com). Licensed under an MIT license.
     }
 }
 
+Function Open-Notebook {
+<#
+.SYNOPSIS
+Opens a notebook in a text editor.
+
+.DESCRIPTION
+Opens a notebook in a text editor. If the alias npp is defined, it will use the editor defined there,
+otherwise it will open the notebook in notepad.
+
+.PARAMETER Notebook
+Notebook alias to open.
+
+.EXAMPLE
+$ > Open-Notebook KMD
+
+.NOTES
+Written by Kevin Doblosky (kdoblosky@gmail.com). Licensed under an MIT license.
+#>
+    param(
+        $Notebook
+    )
+    try {
+        Get-Alias npp -ErrorAction Stop | Out-Null
+        npp (Get-NotebookPath $Notebook)
+    } catch {
+        notepad (Get-NotebookPath $Notebook)
+    }
+}
+
 Function Add-NewNote {
 <#
 .SYNOPSIS
@@ -207,3 +236,4 @@ New-Alias -Name note -Value Add-NewNote
 New-Alias -Name anb -Value Add-Notebook
 New-Alias -Name gn -Value Get-Notes
 New-Alias -Name nbs -Value Get-Notebooks
+New-Alias -Name onb -Value Open-Notebook
