@@ -29,7 +29,7 @@ Variables:
 
 Usage:
 
-Dot-source this file, or include its contents in your $profile.
+Dot-source PSNotes.ps1, or include its contents in your $profile.
 
 ```
 # Create notebook list - assumes that $NoteBookList is set to a valid path.
