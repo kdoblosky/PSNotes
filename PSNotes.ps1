@@ -6,6 +6,31 @@ $DefaultNotePath = "E:\Scripts\PSNotes"
 # Where to store list of notebooks
 $NoteBookList = Join-Path $DefaultNotePath NotesList.json
 
+Function Get-NotebooksDynamicParam($Name) {
+<#
+.DESCRIPTION
+Called by other functions in this script to add a dynamic parameter with a ValidateSet of the
+existing notebooks. This allows tab completion.
+#>    
+    $attrib = New-Object System.Management.Automation.ParameterAttribute
+    $attrib.ParameterSetName = "__AllParameterSets"
+    $attrib.Position = 0
+    $attrib.Mandatory = $true
+        
+    $items = (Get-Notebooks).Keys
+    $validate = New-Object System.Management.Automation.ValidateSetAttribute -ArgumentList $items
+        
+    $AttributeCollection = New-Object 'Collections.ObjectModel.Collection[System.Attribute]'
+    $AttributeCollection.Add($attrib)
+    $AttributeCollection.Add($validate)
+
+    $DynParameter = New-Object -TypeName System.Management.Automation.RuntimeDefinedParameter -ArgumentList @($Name, [string], $AttributeCollection)
+        
+    $ParamDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+    $ParamDictionary.Add($Name, $DynParameter)
+    $ParamDictionary
+}
+
 Function Get-Notebooks([switch]$Force) {
 <#
 .SYNOPSIS
@@ -44,6 +69,7 @@ Written by Kevin Doblosky (kdoblosky@gmail.com). Licensed under an MIT license.
     }
 
     $notebooks = [ordered]@{}
+
     if (! (Test-Path $NoteBookList) ) {
         if ($Force) {
             try {
@@ -68,27 +94,35 @@ Written by Kevin Doblosky (kdoblosky@gmail.com). Licensed under an MIT license.
     $notebooks
 }
 
-Function Get-NotebookPath ($Alias) {
-<#
-.SYNOPSIS
-Retrieves the path to the specified notebook.
+Function Get-NotebookPath  {
+[CmdletBinding()]
+param()
+DynamicParam{
+    Get-NotebooksDynamicParam -Name Alias
+}
+Process {
+    <#
+    .SYNOPSIS
+    Retrieves the path to the specified notebook.
 
-.DESCRIPTION
-Retrieves the path to the specified notebook.
+    .DESCRIPTION
+    Retrieves the path to the specified notebook.
 
-.PARAMETER Alias
-The alias for the notebook to retrieve.
+    .PARAMETER Alias
+    The alias for the notebook to retrieve.
 
-.EXAMPLE
-$ > Get-NotebookPath KMD
-D:\Notes\KMD.txt
+    .EXAMPLE
+    $ > Get-NotebookPath KMD
+    D:\Notes\KMD.txt
 
-.NOTES
-Written by Kevin Doblosky (kdoblosky@gmail.com). Licensed under an MIT license.
-#>
-    # TODO: Handle any errors from Get-Notebooks
-    $notebooks = Get-Notebooks
-    $notebooks[$Alias]
+    .NOTES
+    Written by Kevin Doblosky (kdoblosky@gmail.com). Licensed under an MIT license.
+    #>
+        $Alias = $PSBoundParameters.Alias
+        # TODO: Handle any errors from Get-Notebooks
+        $notebooks = Get-Notebooks
+        $notebooks[$Alias]
+    }
 }
 
 Function Add-Notebook($Alias, $NotebookPath) {
@@ -122,31 +156,41 @@ Written by Kevin Doblosky (kdoblosky@gmail.com). Licensed under an MIT license.
     $notebooks | ConvertTo-Json | Set-Content $NoteBookList
 }
 
-Function Get-Notes($Notebook) {
-<#
-.SYNOPSIS
-Retrieves all notes for the specified notebook.
+Function Get-Notes{
+    [CmdletBinding()]
+    param()
+    DynamicParam{
+        Get-NotebooksDynamicParam -Name Notebook
+    }
+    process {
+        <#
+        .SYNOPSIS
+        Retrieves all notes for the specified notebook.
 
-.DESCRIPTION
-Retrieves all notes for the specified notebook.
+        .DESCRIPTION
+        Retrieves all notes for the specified notebook.
 
-.PARAMETER Notebook
-The notebook alias to retreive the notes from
+        .PARAMETER Notebook
+        The notebook alias to retreive the notes from
 
-.EXAMPLE
-$ > Get-Notes KMD
-2014-02-18 - Almost time to immanentize the eschaton
-2014-02-18 - I can see the fnords!
+        .EXAMPLE
+        $ > Get-Notes KMD
+        2014-02-18 - Almost time to immanentize the eschaton
+        2014-02-18 - I can see the fnords!
 
-.NOTES
-Written by Kevin Doblosky (kdoblosky@gmail.com). Licensed under an MIT license.
-#>
-    $notebooks = Get-Notebooks
+        .NOTES
+        Written by Kevin Doblosky (kdoblosky@gmail.com). Licensed under an MIT license.
+        #>
+
+        $Notebook = $PSBoundParameters.Notebook
+
+        $notebooks = Get-Notebooks
     
-    if ($notebooks.Contains($Notebook)) {
-        Get-Content $notebooks[$Notebook]
-    } else {
-        "Notebook does not exist"
+        if ($notebooks.Contains($Notebook)) {
+            Get-Content $notebooks[$Notebook]
+        } else {
+            "Notebook does not exist"
+        }
     }
 }
 
@@ -168,14 +212,20 @@ $ > Open-Notebook KMD
 .NOTES
 Written by Kevin Doblosky (kdoblosky@gmail.com). Licensed under an MIT license.
 #>
-    param(
-        $Notebook
-    )
-    try {
-        Get-Alias npp -ErrorAction Stop | Out-Null
-        npp (Get-NotebookPath $Notebook)
-    } catch {
-        notepad (Get-NotebookPath $Notebook)
+    [CmdletBinding()]
+    param()
+    DynamicParam{
+       Get-NotebooksDynamicParam -Name Notebook
+    }
+
+    process {
+        $Notebook = $PSBoundParameters.Notebook
+        try {
+            Get-Alias npp -ErrorAction Stop | Out-Null
+            npp (Get-NotebookPath -Alias $Notebook)
+        } catch {
+            notepad (Get-NotebookPath -Alias $Notebook)
+        }
     }
 }
 
@@ -207,30 +257,38 @@ Notebook doesn't exist. Creating it at D:\Notes\QQQ.txt
 .NOTES
 Written by Kevin Doblosky (kdoblosky@gmail.com). Licensed under an MIT license.
 #>
+    [CmdletBinding()]
     param(
-        $Notebook,
         $Note,
         [switch]$Force
     )
 
-    $NotebookPath = Get-NotebookPath $Notebook
-
-    if ($NotebookPath -eq $null) {
-        if ($Force) {
-            $NotebookPath = Join-Path $DefaultNotePath "$Notebook.txt"
-            Write-Host "Notebook doesn't exist. Creating it at $NotebookPath."
-            
-            New-Item $NotebookPath -ItemType File -Force | Out-Null
-            Add-Notebook $Notebook $NotebookPath
-        }
-        else {
-            throw "Notebook doesn't exist"
-        }
+    DynamicParam{
+        Get-NotebooksDynamicParam -Name Notebook
     }
 
-    $datestamp = (Get-Date).ToString("yyyy-MM-dd")
-    Add-Content -Path $NotebookPath -Value "$datestamp - $Note"
+    Process {
+        $Notebook = $PSBoundParameters.Notebook
+        $NotebookPath = Get-NotebookPath -Alias $Notebook
+
+        if ($NotebookPath -eq $null) {
+            if ($Force) {
+                $NotebookPath = Join-Path $DefaultNotePath "$Notebook.txt"
+                Write-Host "Notebook doesn't exist. Creating it at $NotebookPath."
+            
+                New-Item $NotebookPath -ItemType File -Force | Out-Null
+                Add-Notebook $Notebook $NotebookPath
+            }
+            else {
+                throw "Notebook doesn't exist"
+            }
+        }
+
+        $datestamp = (Get-Date).ToString("yyyy-MM-dd")
+        Add-Content -Path $NotebookPath -Value "$datestamp - $Note"
+    }
 }
+
 
 New-Alias -Name note -Value Add-NewNote
 New-Alias -Name anb -Value Add-Notebook
